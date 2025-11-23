@@ -64,7 +64,7 @@ export default function App() {
         
         const alertas = await res.json();
         
-        if (alertas.length > 0) {
+        if (alertas.length > 0 && !dadosModal) {
           const primeiroAlerta = alertas[0];
           tocarAlerta(primeiroAlerta.nome);
           
@@ -85,7 +85,7 @@ export default function App() {
     const intervalo = setInterval(verificarAlertasBackend, 60000); 
     
     return () => clearInterval(intervalo);
-  }, [modoOffline, dadosModal]);
+  }, [modoOffline]);
 
   const salvarMedicamento = async () => {
     if (!formNome || !formDias) {
