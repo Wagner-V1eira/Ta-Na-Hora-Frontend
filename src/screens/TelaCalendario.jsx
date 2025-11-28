@@ -18,7 +18,8 @@ const TelaCalendario = ({
   const listaDias = Array.from({ length: diasNoMes }, (_, i) => i + 1);
 
   const obterStatusDia = (dia, med) => {
-    const chaveData = `${med.id}_${hoje.getFullYear()}-${hoje.getMonth()}-${dia}`;
+    const mesAtual = hoje.getMonth() + 1;
+    const chaveData = `${med.id}_${hoje.getFullYear()}-${mesAtual}-${dia}`;
     if (registros[chaveData] === 'tomado') return 'verde';
     const dataAtualLoop = new Date(hoje.getFullYear(), hoje.getMonth(), dia);
     const dataInicio = new Date(med.dataInicio);

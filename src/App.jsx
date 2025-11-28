@@ -45,6 +45,30 @@ export default function App() {
         const dados = await res.json();
         setMedicamentos(dados);
         setModoOffline(false);
+        
+        // Carregar registros existentes
+        try {
+          const resRegistros = await fetch('http://localhost:5000/api/registros');
+          if (resRegistros.ok) {
+            const dadosRegistros = await resRegistros.json();
+            const registrosMap = {};
+            
+            dadosRegistros.forEach(reg => {
+              // Pega a data diretamente do formato YYYY-MM-DD do backend
+              const partesData = reg.data.split('-');
+              const ano = partesData[0];
+              const mes = parseInt(partesData[1]); // Já vem 1-12 do backend
+              const dia = parseInt(partesData[2]);
+              const chave = `${reg.id_med}_${ano}-${mes}-${dia}`;
+              registrosMap[chave] = 'tomado';
+            });
+            
+            setRegistros(registrosMap);
+            console.log('Registros carregados:', registrosMap);
+          }
+        } catch (erroReg) {
+          console.warn("Erro ao carregar registros:", erroReg);
+        }
       } catch (erro) {
         console.warn("Backend offline.", erro);
         setModoOffline(true);
@@ -85,7 +109,7 @@ export default function App() {
     const intervalo = setInterval(verificarAlertasBackend, 60000); 
     
     return () => clearInterval(intervalo);
-  }, [modoOffline]);
+  }, [modoOffline, dadosModal]);
 
   const salvarMedicamento = async () => {
     if (!formNome || !formDias) {
@@ -171,7 +195,8 @@ export default function App() {
 
   const aoClicarDia = (dia, med) => {
     const hoje = new Date();
-    const chaveData = `${med.id}_${hoje.getFullYear()}-${hoje.getMonth()}-${dia}`;
+    const mesAtual = hoje.getMonth() + 1;
+    const chaveData = `${med.id}_${hoje.getFullYear()}-${mesAtual}-${dia}`;
     if (registros[chaveData] === 'tomado') return;
     
     const dataAtualLoop = new Date(hoje.getFullYear(), hoje.getMonth(), dia);
@@ -190,23 +215,36 @@ export default function App() {
       const { dia, med } = dadosModal;
       const agora = new Date();
       const horarioAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
-      const dataAtual = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+      const mesAtual = agora.getMonth() + 1;
+      const anoAtual = agora.getFullYear();
+      const dataAtual = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
       
-      const chaveData = `${med.id}_${agora.getFullYear()}-${agora.getMonth()}-${dia}`;
+      // Chave usa mesAtual (1-12) para consistência com o backend
+      const chaveData = `${med.id}_${anoAtual}-${mesAtual}-${dia}`;
       setRegistros(prev => ({ ...prev, [chaveData]: 'tomado' }));
       
       if (!modoOffline) {
         try {
-          await fetch('http://localhost:5000/api/registro', {
+          const dadosRegistro = {
+            id_med: med.id,
+            data: dataAtual,
+            horario: horarioAtual,
+            status: 'tomado'
+          };
+          console.log('Enviando registro:', dadosRegistro);
+          
+          const response = await fetch('http://localhost:5000/api/registro', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id_med: med.id,
-              data: dataAtual,
-              horario: horarioAtual,
-              status: 'tomado'
-            })
+            body: JSON.stringify(dadosRegistro)
           });
+          
+          const resultado = await response.json();
+          console.log('Resposta do backend:', resultado);
+          
+          if (!response.ok) {
+            console.error('Erro na resposta:', response.status);
+          }
         } catch (erro) { 
           console.error("Erro ao registrar:", erro); 
         }
